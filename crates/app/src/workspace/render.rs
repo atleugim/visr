@@ -3,19 +3,8 @@
 use super::*;
 
 impl Workspace {
-  /// Starts the motions a frame can only notice: a different tab in sight, rows new to the
-  /// sidebar. Drops those that are done.
+  /// Grows in rows new to the sidebar, and drops the motions that are done.
   fn track_motion(&mut self, now: Instant) {
-    let tab = self
-      .layout
-      .active()
-      .and_then(|tab| tab.root.leaves().first().map(|first| first.to_string()));
-    if tab != self.shown_tab {
-      if self.shown_tab.is_some() && tab.is_some() {
-        self.tab_fade = Tween::new(0.0, 1.0, now, motion::duration());
-      }
-      self.shown_tab = tab;
-    }
     let rows: HashSet<String> = sidebar_entries(&self.layout, &self.terminals)
       .iter()
       .filter_map(|entry| row_key(entry).map(str::to_string))
@@ -57,8 +46,7 @@ impl Render for Workspace {
     {
       self.panel_switch = None;
     }
-    let fading = !self.tab_fade.done(now)
-      || !self.entrance.done(now)
+    let fading = !self.entrance.done(now)
       || self.panel_switch.is_some()
       || !self.row_motion.is_empty()
       || self.menu.as_ref().is_some_and(|menu| !menu.shown.done(now))
@@ -118,12 +106,7 @@ impl Render for Workspace {
           .relative()
           .flex_1()
           .min_h_0()
-          .child(
-            div()
-              .size_full()
-              .opacity(self.tab_fade.value(now))
-              .child(panes),
-          )
+          .child(panes)
           .child(self.measure_area())
           .children(self.render_zoom(now, cx)),
       )

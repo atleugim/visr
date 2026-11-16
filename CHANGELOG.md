@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Terminals no longer flash when you create a tab or switch between tabs
+
 ## [0.1.0] - 2026-11-15
 
 ### Added

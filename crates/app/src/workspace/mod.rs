@@ -189,9 +189,6 @@ pub(crate) struct Workspace {
   /// Where each pane and the area they share were laid out, for a zoom to grow from.
   pane_bounds: Rc<RefCell<HashMap<String, Bounds<Pixels>>>>,
   panes_area: Rc<RefCell<Option<Bounds<Pixels>>>>,
-  /// The tab in sight, by its first terminal, and its fade in when it comes into sight.
-  shown_tab: Option<String>,
-  tab_fade: Tween,
   /// The window coming in from the setup: the curtain of the window's color lifts.
   entrance: Tween,
   /// Sidebar rows by their first terminal: those seen so far, and new ones growing in.
@@ -362,9 +359,7 @@ impl Workspace {
       zoom: None,
       pane_bounds: Rc::default(),
       panes_area: Rc::default(),
-      shown_tab: None,
       focus_handle: cx.focus_handle(),
-      tab_fade: Tween::settled(1.0),
       entrance: Tween::settled(1.0),
       known_rows: None,
       row_motion: HashMap::new(),
