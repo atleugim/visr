@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Install Visr on Windows with a setup that adds it to the Start menu and the Apps list
+
 ### Fixed
 
 - Terminals no longer flash when you create a tab or switch between tabs
