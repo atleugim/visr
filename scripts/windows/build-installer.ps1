@@ -36,6 +36,6 @@ $env:VISR_EXE = $source.Path
 $env:VISR_DIST = (Resolve-Path $outputPath).Path
 # Inno Setup names the x64 architecture x64compatible.
 $env:VISR_ARCH = if ($Arch -eq "x64") { "x64compatible" } else { "arm64" }
-$env:VISR_SETUP = "visr-v$plainVersion-windows-$Arch-setup"
+$env:VISR_SETUP = "visr-v$plainVersion-windows-$Arch"
 
 & $iscc (Join-Path $PSScriptRoot "visr.iss")

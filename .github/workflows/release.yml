@@ -75,7 +75,7 @@ jobs:
         with:
           if-no-files-found: error
           name: windows-setup-${{ matrix.arch }}
-          path: dist/visr-v*-windows-${{ matrix.arch }}-setup.exe
+          path: dist/visr-v*-windows-${{ matrix.arch }}.exe
 
   macos:
     name: macos app bundle
@@ -138,8 +138,7 @@ jobs:
           # Windows names its architectures x64 and arm64.
           for build in x86_64-pc-windows-msvc:x64:'x86-64|x86_64|amd64' aarch64-pc-windows-msvc:arm64:'aarch64|arm64'; do
             IFS=: read -r target arch machine <<< "$build"
-            exe="dist/visr-$GITHUB_REF_NAME-windows-$arch.exe"
-            cp "artifacts/$target/visr.exe" "$exe"
+            exe="artifacts/$target/visr.exe"
             # Checked by reading the header only: the executables are never run.
             info="$(file -b "$exe")"
             grep -q 'PE32+' <<< "$info" && grep -q '(GUI)' <<< "$info" && grep -qiE "$machine" <<< "$info" \
