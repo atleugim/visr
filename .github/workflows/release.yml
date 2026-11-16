@@ -157,22 +157,9 @@ jobs:
               || { echo "$zip has no licenses/$entry" >&2; exit 1; }
           done
           cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
-      # The notes are this version's section of CHANGELOG.md, up to the next heading or the links.
-      - run: |
-          version="${GITHUB_REF_NAME#v}"
-          awk -v heading="## [$version]" '
-            /^\[[^]]+\]: / { found = 0 }
-            /^## / { found = (index($0, heading) == 1) ; next }
-            found { print }
-          ' CHANGELOG.md > notes.md
-          if ! grep -q '[^[:space:]]' notes.md; then
-            echo "CHANGELOG.md has no section for $version" >&2
-            exit 1
-          fi
-          cat notes.md
       - env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes
           gh release upload "$GITHUB_REF_NAME" dist/* --clobber

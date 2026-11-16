@@ -399,8 +399,10 @@ contributor who makes it.
 ## Pull requests
 
 The PR title follows the same Conventional Commits rules as a commit header, because a squash merge
-turns it into the commit on `dev`. The PR body follows `.github/pull_request_template.md`: Summary,
-Changes, Breaking changes, and Screenshots / Additional context.
+turns it into the commit on `dev` and into that PR's line in the release notes, so it names the
+change in words a reader of the release page understands. The PR body follows
+`.github/pull_request_template.md`: Summary, Changes, Breaking changes, and Screenshots /
+Additional context.
 
 Summary is one or two sentences on why the change is needed and what a person gets out of it. The
 bullets go under Changes, one per behavior change. They are lowercase, imperative and one line
@@ -413,7 +415,8 @@ ran it on.
 `CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions
 follow [Semantic Versioning](https://semver.org/). A change someone using Visr can notice adds an
 entry to `## [Unreleased]` in the same commit, under `Added`, `Changed`, `Deprecated`, `Removed`,
-`Fixed` or `Security`.
+`Fixed` or `Security`. The changelog is the human record of each version. It does not feed the
+release notes, which GitHub generates (see Releases), and these rules still apply.
 
 - One short line per entry, saying what a person can now do or what no longer goes wrong, in
   their words: "Split panes open in the focused terminal's folder", not "pass working_dir to
@@ -435,8 +438,9 @@ entry to `## [Unreleased]` in the same commit, under `Added`, `Changed`, `Deprec
 3. A maintainer tags the merge commit on `main` and pushes the tag:
    `git tag -a vX.Y.Z -m "visr X.Y.Z" && git push origin vX.Y.Z`. The tag push runs the release
    workflow, which builds the universal macOS dmg and the Windows x64 and arm64 executables and
-   publishes the GitHub release with that version's changelog section. It can be dry-run from the
-   Actions tab.
+   publishes the GitHub release. Its notes are GitHub's generated list of the PRs merged since the
+   previous tag, with their titles, authors and numbers. It can be dry-run from the Actions tab,
+   which creates no release.
 
 Signing: the macOS app is ad-hoc signed (`codesign --sign -`) and not notarized, and the Windows
 executables are unsigned. The README tells people how to open a build the first time on each
