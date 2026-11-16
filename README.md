@@ -29,7 +29,7 @@ Builds are published on the
 [GitHub releases](https://github.com/atleugim/visr/releases) page. Every release has:
 
 - `visr-vX.Y.Z-macos-universal.dmg`, for Apple Silicon and Intel Macs
-- `visr-vX.Y.Z-windows-x64.exe` and `visr-vX.Y.Z-windows-arm64.exe`
+- `visr-vX.Y.Z-windows-x64.exe` and `visr-vX.Y.Z-windows-arm64.exe`, the Windows installers
 - `visr-vX.Y.Z-licenses.zip`, with the licenses of Visr, its fonts and its icons
 - `SHA256SUMS`, with the checksum of each file
 
@@ -41,8 +41,8 @@ After that it opens normally.
 
 ### Open it on Windows
 
-The executables are not signed, so Windows SmartScreen may warn you. To run it anyway, choose
-More info, then Run anyway.
+The installers are not signed, so Windows SmartScreen may warn you. To run it
+anyway, choose More info, then Run anyway.
 
 ## Build
 

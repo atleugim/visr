@@ -172,8 +172,6 @@ impl Workspace {
   /// Comes in from a curtain of the window's color, for the setup to hand over to it.
   pub(crate) fn fade_in(&mut self) {
     self.entrance = Tween::new(0.0, 1.0, Instant::now(), motion::duration());
-    // The curtain is the one fade of the first tab; its own would dim it a second time.
-    self.tab_fade = Tween::settled(1.0);
   }
 
   pub(super) fn toggle_sidebar(&mut self) {
