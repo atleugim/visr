@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-16
+
 ### Added
 
 - Install Visr on Windows with a setup that adds it to the Start menu and the Apps list
@@ -28,5 +30,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Reload the theme with a shortcut, so edits to its file show without a restart
 - Your own themes in the `themes` folder next to `config.toml`
 
-[Unreleased]: https://github.com/atleugim/visr/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/atleugim/visr/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/atleugim/visr/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/atleugim/visr/commits/v0.1.0
