@@ -372,10 +372,11 @@ installer at a mirror or a `file://` fixture, and the app warns when it is set.
 
 ## Branches
 
-- `main` holds released code only. It receives only release merges from `dev`, and each one is a
-  release.
-- `dev` is the integration branch and the repository's default. Every feature and fix PR targets
-  `dev`.
+- `main` is the principal branch and holds released code only. It receives PRs only from `dev`,
+  and each one is a release.
+- `dev` is the work branch and the repository's default. Every PR except a release PR targets
+  `dev`, and `dev` never takes a PR from `main`. `## [Unreleased]` in `CHANGELOG.md` lists what is
+  on `dev` but not yet on `main`.
 - Work branches start from `dev` and are named `feat/…`, `fix/…`, `chore/…`, `docs/…` or `ci/…`.
 - Nothing is pushed directly to `main` or `dev`. Everything goes through a PR.
 - PRs into `dev` are squash-merged. Release PRs from `dev` into `main` use a merge commit.
