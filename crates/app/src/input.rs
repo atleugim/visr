@@ -69,6 +69,24 @@ pub(crate) fn key_press(keystroke: &Keystroke) -> config::KeyPress {
   }
 }
 
+/// The press in GPUI's keystroke syntax, such as `cmd-shift-q`: the reverse of `key_press`.
+pub(crate) fn gpui_keystroke(press: &config::KeyPress) -> String {
+  let modifiers = [
+    (press.ctrl, "ctrl-"),
+    (press.alt, "alt-"),
+    (press.shift, "shift-"),
+    (press.platform, "cmd-"),
+  ];
+  let mut text = String::new();
+  for (held, name) in modifiers {
+    if held {
+      text.push_str(name);
+    }
+  }
+  text.push_str(&press.key);
+  text
+}
+
 /// The `(row, col)` under a point in the terminal, clamped to the grid; `size` is `(cols, rows)`.
 pub(crate) fn cell_at(
   x: f32,

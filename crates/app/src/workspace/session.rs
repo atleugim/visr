@@ -12,6 +12,7 @@ impl Workspace {
     window: &mut Window,
     cx: &mut Context<Self>,
   ) {
+    crate::about::set_core_version(&client.hello().version, cx);
     self.client = client;
     self.terminals.reset(snapshot);
     self.reconnecting = false;

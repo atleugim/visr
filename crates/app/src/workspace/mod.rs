@@ -64,6 +64,7 @@ use crate::SIDEBAR_WIDTH;
 use crate::connection::{Connection, LAYOUT_DOC, missed_snapshot, subscribe};
 use crate::editors::{self, Editor};
 use crate::input;
+use crate::notice;
 use crate::system_appearance;
 use crate::terminal_view::{Output, PaneFocused, TerminalColors, TerminalView, hsla};
 
@@ -140,7 +141,7 @@ pub(crate) struct Workspace {
   config: Config,
   /// The config file is invalid; the last good config stays in use.
   config_error: Option<String>,
-  /// What was wrong with the theme at launch, in full sentences.
+  /// What the applied config and theme left out, in full sentences.
   theme_notice: Option<SharedString>,
   /// The connection to the core dropped and a new one is being tried.
   reconnecting: bool,
@@ -229,6 +230,7 @@ impl Workspace {
       saved_layout: saved,
       layout_version,
     } = connection;
+    crate::about::set_core_version(&client.hello().version, cx);
     let client = Arc::new(client);
 
     let window_handle = window.window_handle();
@@ -383,12 +385,14 @@ impl Workspace {
   }
 
   /// Reads the configured theme again off the UI thread, so edits to its file show without a
-  /// restart. Issues are shown in the banner, which a clean load clears.
+  /// restart. Issues are shown in the banner, which a clean load clears. The banner also carries
+  /// what the applied config left out, so a theme reload doesn't hide it.
   ///
   /// Uses the theme named by the config last applied in memory, not a fresh read of `config.toml`,
   /// so a press before the window's config check finishes reloads the previous choice.
   fn reload_theme(&mut self, window: &Window, cx: &mut Context<Self>) {
     let choice = self.config.theme.clone();
+    let config_messages = self.config.messages.clone();
     let system = system_appearance(window.appearance());
     self._theme_reload = Some(cx.spawn(async move |this, cx| {
       let loaded = cx
@@ -396,8 +400,7 @@ impl Workspace {
         .spawn(async move { LoadedTheme::load(&choice, system, &config::themes_dir()) })
         .await;
       let _ = this.update(cx, |workspace, cx| {
-        workspace.theme_notice =
-          (!loaded.messages.is_empty()).then(|| loaded.messages.join("\n").into());
+        workspace.theme_notice = notice(&config_messages, &loaded.messages);
         workspace.apply_theme(&loaded.theme, cx);
       });
     }));

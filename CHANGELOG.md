@@ -7,6 +7,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Cmd+Q quits Visr on macOS, and Ctrl+Shift+Q on Windows
+- About Visr in the Visr menu on macOS shows the app and herdr-core versions
+
 ## [0.1.1] - 2026-11-16
 
 ### Added

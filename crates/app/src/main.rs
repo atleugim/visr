@@ -3,11 +3,13 @@
 // Release builds on Windows open no console window next to the app.
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
+mod about;
 mod assets;
 mod connection;
 mod editors;
 mod git;
 mod input;
+mod menu;
 mod setup;
 mod startup;
 mod terminal_view;
@@ -19,14 +21,14 @@ use std::borrow::Cow;
 use config::{Config, LoadedTheme};
 use connection::Connection;
 use gpui::{
-  App, Application, Bounds, TitlebarOptions, WindowAppearance, WindowBounds, WindowOptions, point,
-  prelude::*, px, size,
+  App, Application, Bounds, SharedString, TitlebarOptions, WindowAppearance, WindowBounds,
+  WindowOptions, point, prelude::*, px, size,
 };
 use setup::{Launch, Setup};
 use startup::{StartupError, startup_message};
 use terminal_view::TerminalColors;
 use theme::Appearance;
-use ui::tokens::TRAFFIC_LIGHTS_TOP;
+use ui::tokens::{TRAFFIC_LIGHTS_LEFT, TRAFFIC_LIGHTS_TOP};
 use workspace::Workspace;
 
 const SIDEBAR_WIDTH: f32 = 220.0;
@@ -57,6 +59,7 @@ fn main() {
       cx.text_system()
         .add_fonts(fonts)
         .expect("load the bundled fonts");
+      menu::install(&config.keys, cx);
       cx.on_window_closed(|cx| {
         if cx.windows().is_empty() {
           cx.quit();
@@ -72,7 +75,7 @@ fn main() {
       ui::colors::install(&loaded.theme.ui, cx);
       cx.set_global(TerminalColors::new(&loaded.theme.terminal));
       // Shown once, when the window opens.
-      let theme_notice = (!loaded.messages.is_empty()).then(|| loaded.messages.join("\n").into());
+      let theme_notice = notice(&config.messages, &loaded.messages);
       let bounds = Bounds::centered(None, size(px(1100.0), px(700.0)), cx);
       let options = WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(bounds)),
@@ -80,7 +83,7 @@ fn main() {
           title: Some("Visr".into()),
           // Windows keeps its native title bar: drawing our own needs the caption buttons too.
           appears_transparent: cfg!(target_os = "macos"),
-          traffic_light_position: Some(point(px(14.0), px(TRAFFIC_LIGHTS_TOP))),
+          traffic_light_position: Some(point(px(TRAFFIC_LIGHTS_LEFT), px(TRAFFIC_LIGHTS_TOP))),
         }),
         ..Default::default()
       };
@@ -132,4 +135,10 @@ pub(crate) fn system_appearance(appearance: WindowAppearance) -> Appearance {
     WindowAppearance::Light | WindowAppearance::VibrantLight => Appearance::Light,
     WindowAppearance::Dark | WindowAppearance::VibrantDark => Appearance::Dark,
   }
+}
+
+/// The banner text for what the config file and the theme left out, or `None` when all applied.
+pub(crate) fn notice(config: &[String], theme: &[String]) -> Option<SharedString> {
+  let messages: Vec<&str> = config.iter().chain(theme).map(String::as_str).collect();
+  (!messages.is_empty()).then(|| messages.join("\n").into())
 }

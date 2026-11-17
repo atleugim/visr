@@ -33,6 +33,8 @@ pub struct Config {
   pub font: FontConfig,
   pub theme: ThemeChoice,
   pub keys: Keymap,
+  /// What was left out of the file, ready to show to the person. Empty when all of it applied.
+  pub messages: Vec<String>,
 }
 
 /// Which theme the user asked for.
@@ -70,29 +72,47 @@ impl Config {
 
   /// The defaults with the user's TOML on top.
   fn parse(user: &str) -> Result<Self, ConfigError> {
-    let user_table = parse_table(user)?;
+    let mut user_table = parse_table(user)?;
+    // Removed before the merge so a value of any type can't fail the parse, and noted for the
+    // message.
+    let quit_ignored = match user_table.get_mut("keys").and_then(Value::as_table_mut) {
+      Some(keys) => keys.remove("quit").is_some(),
+      None => false,
+    };
     let user_keys: Vec<String> = user_table
       .get("keys")
       .and_then(Value::as_table)
       .map(|keys| keys.keys().cloned().collect())
       .unwrap_or_default();
+    let platform_table = parse_table(PLATFORM_DEFAULTS)?;
+    let platform_keys = platform_table
+      .get("keys")
+      .and_then(Value::as_table)
+      .expect("the platform defaults have keys");
     let mut merged = parse_table(COMMON_DEFAULTS)?;
-    merge(&mut merged, parse_table(PLATFORM_DEFAULTS)?);
+    merge(&mut merged, platform_table.clone());
     merge(&mut merged, user_table);
     let raw: RawConfig = Value::Table(merged)
       .try_into()
       .map_err(|error| ConfigError(error.to_string()))?;
+    let (keys, messages) = Keymap::from_names(&raw.keys, &user_keys, quit_ignored, platform_keys)?;
     Ok(Self {
       font: raw.font,
       theme: raw.theme.map_or(ThemeChoice::System, ThemeChoice::Named),
-      keys: Keymap::from_names(&raw.keys, &user_keys)?,
+      keys,
+      messages,
     })
   }
 
   /// A missing file is fine: the defaults apply.
   pub fn load(path: &Path) -> Result<Self, ConfigError> {
     match std::fs::read_to_string(path) {
-      Ok(text) => Self::parse(&text),
+      Ok(text) => Self::parse(&text).map(|mut config| {
+        for message in &mut config.messages {
+          *message = format!("In {}, {message}", path.display());
+        }
+        config
+      }),
       Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(Self::defaults()),
       Err(error) => Err(ConfigError(format!("{}: {error}", path.display()))),
     }
@@ -287,6 +307,7 @@ pub enum Action {
   Copy,
   Paste,
   ReloadTheme,
+  Quit,
 }
 
 fn action_named(name: &str) -> Option<Action> {
@@ -305,6 +326,7 @@ fn action_named(name: &str) -> Option<Action> {
     "copy" => Action::Copy,
     "paste" => Action::Paste,
     "reload_theme" => Action::ReloadTheme,
+    "quit" => Action::Quit,
     _ => match name.strip_prefix("select_tab_")?.parse() {
       Ok(tab @ 1..=9) => Action::SelectTab(tab - 1),
       _ => return None,
@@ -315,6 +337,12 @@ fn action_named(name: &str) -> Option<Action> {
 
 /// Parses `cmd-shift-d`, `ctrl--`, `alt-enter`.
 fn parse_binding(text: &str) -> Result<KeyPress, ConfigError> {
+  // GPUI splits a binding on whitespace into a key sequence, which the keymap can't match.
+  if text.contains(char::is_whitespace) {
+    return Err(ConfigError(format!(
+      "keys: `{text}` has whitespace, which a key can't contain"
+    )));
+  }
   let (modifiers, key) = match text.strip_suffix("--") {
     Some(modifiers) => (modifiers, "-"),
     None => text.rsplit_once('-').unwrap_or(("", text)),
@@ -351,22 +379,63 @@ pub struct Keymap {
   bindings: Vec<(KeyPress, Action)>,
 }
 
+/// An action whose binding was ignored because it used the quit key, and so fell back to its
+/// default.
+struct Restored<'a> {
+  name: &'a str,
+  /// The start of the message to show: what was ignored and why.
+  ignored: String,
+  default: &'a str,
+  press: KeyPress,
+}
+
 impl Keymap {
   /// `user_keys` are the actions the user's file sets: their keys are theirs, so a default on the
-  /// same key gives way. Two bindings left on one key is an error, not a silent winner.
+  /// same key gives way. Two bindings left on one key is an error, not a silent winner. `quit`
+  /// can't be changed and no other action may use its key. Neither is an error: the binding is
+  /// ignored and the default stays, with a message for the person. `quit_ignored` says the user's
+  /// file set `quit`, which `names` no longer carries. The messages come back with the keymap.
   fn from_names(
     names: &BTreeMap<String, String>,
     user_keys: &[String],
-  ) -> Result<Self, ConfigError> {
+    quit_ignored: bool,
+    platform_keys: &Table,
+  ) -> Result<(Self, Vec<String>), ConfigError> {
+    let default_binding = |name: &str| platform_keys.get(name).and_then(Value::as_str);
+    let quit_binding = default_binding("quit").expect("the platform defaults bind quit");
+    let quit_press = parse_binding(quit_binding).expect("the built-in quit key is valid");
+    let mut messages = Vec::new();
+    if quit_ignored {
+      messages.push(format!(
+        "keys: `quit` can't be changed, so that binding was ignored and its default \
+         `{quit_binding}` is used."
+      ));
+    }
+    // Actions that fell back to their default: that key gives way to the user's bindings.
+    let mut restored: Vec<Restored> = Vec::new();
     let mut parsed = Vec::new();
     for (name, binding) in names {
       let action =
         action_named(name).ok_or_else(|| ConfigError(format!("keys: unknown action `{name}`")))?;
       if !binding.is_empty() {
-        parsed.push((name.as_str(), parse_binding(binding)?, action));
+        let mut press = parse_binding(binding)?;
+        if action != Action::Quit && press == quit_press {
+          let ignored = format!("keys: `{name}` can't use `{binding}`, which is kept for quit");
+          let default = default_binding(name).expect("every action has a platform default");
+          press = parse_binding(default).expect("the built-in defaults are valid");
+          restored.push(Restored {
+            name,
+            ignored,
+            default,
+            press: press.clone(),
+          });
+        }
+        parsed.push((name.as_str(), press, action));
       }
     }
-    let is_user_key = |name: &str| user_keys.iter().any(|key| key == name);
+    let is_user_key = |name: &str| {
+      user_keys.iter().any(|key| key == name) && !restored.iter().any(|r| r.name == name)
+    };
     let user_presses: Vec<&KeyPress> = parsed
       .iter()
       .filter(|(name, _, _)| is_user_key(name))
@@ -383,11 +452,33 @@ impl Keymap {
         )));
       }
     }
+    // A restored default can still lose to a user's binding, so say what really happened.
+    for Restored {
+      name,
+      ignored,
+      default,
+      press: restored_press,
+    } in &restored
+    {
+      let taker = kept
+        .iter()
+        .find(|(n, press, _)| n != name && press == restored_press)
+        .map(|(n, _, _)| *n);
+      messages.push(match taker {
+        None => {
+          format!("{ignored}, so that binding was ignored and its default `{default}` is used.")
+        }
+        Some(other) => format!(
+          "{ignored}, so that binding was ignored. Its default `{default}` is taken by `{other}`, \
+           so it has no key."
+        ),
+      });
+    }
     let bindings = kept
       .into_iter()
       .map(|(_, press, action)| (press.clone(), *action))
       .collect();
-    Ok(Self { bindings })
+    Ok((Self { bindings }, messages))
   }
 
   /// The key bound to `action`, if it has one.
