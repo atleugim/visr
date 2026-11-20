@@ -8,16 +8,22 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 
-use app_state::layout::{Axis, Branch, Layout, Node, split_size};
+use app_state::layout::{Axis, Branch, FolderId, Layout, Node, split_size};
+use app_state::sidebar::{
+  Direction, DropSpot, Hover, SidebarFolder, SidebarItem, SidebarKey, drop_spot, dropped, find_row,
+  folder_of, moved_folder, moved_row, moved_to_folder, moved_to_new_folder, removed_from_folder,
+  sidebar_items, with_new_folder,
+};
 use app_state::{
-  Entry, Indicator, Terminals, clean_exits, display_name, entry_label, indicator, panes_to_close,
-  sidebar_entries,
+  Entry, Indicator, Terminals, clean_exits, display_name, entry_label, most_urgent, panes_to_close,
+  row_indicator,
 };
 use config::{Action, Config, KeyPress, LoadedTheme, ThemeChoice};
 use gpui::{
-  AnyElement, App, Bounds, Context, Entity, FocusHandle, Hsla, KeyDownEvent, MouseButton,
-  MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels, Point, SharedString, Subscription, Task,
-  Window, anchored, canvas, deferred, div, point, prelude::*, px, relative, rgb,
+  AnyElement, App, Bounds, Context, DragMoveEvent, Entity, FocusHandle, Hsla, KeyDownEvent,
+  MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels, Point, ScrollHandle,
+  SharedString, Subscription, Task, Window, anchored, canvas, deferred, div, point, prelude::*, px,
+  relative, rgb,
 };
 use hc_client::{Client, Notice};
 use hc_proto::types::{
@@ -26,7 +32,7 @@ use hc_proto::types::{
 };
 use ui::colors::Colors;
 use ui::icons::{
-  ICON_CODE, ICON_ELLIPSIS, ICON_EXPAND, ICON_FILES, ICON_FOLDER_OPENED, ICON_FONT, ICON_RESTORE,
+  ICON_CODE, ICON_ELLIPSIS, ICON_EXPAND, ICON_FOLDER, ICON_FOLDER_OPENED, ICON_FONT, ICON_RESTORE,
   ICON_SOURCE_CONTROL, ICON_TERMINAL, ShellColors, StackColors, close_icon, glyph_icon, plus_icon,
   shell_icon, sidebar_icon, split_icon, stack_icon, titlebar_button,
 };
@@ -34,15 +40,16 @@ use ui::menu::{MenuColors, menu_item, menu_item_icon, menu_separator};
 use ui::motion::{self, Tween};
 use ui::text_field::{FieldEvent, TextField, TextFieldColors};
 use ui::tokens::{
-  DIVIDER_WIDTH, HEADER_PADDING, PANE_BORDER_WIDTH, PANE_CHROME_HEIGHT, PANE_CHROME_WIDTH,
-  PANE_EDGE, PANE_HEADER_HEIGHT, PANE_PADDING_BOTTOM, PANE_PADDING_LEFT, PANE_RADIUS, ROW_HEIGHT,
-  ROW_INSET, TITLEBAR_BUTTON, TITLEBAR_HEIGHT, TITLEBAR_NUDGE, TOGGLE_GAP, TOGGLE_LEFT, TOGGLE_TOP,
-  WINDOW_GAP,
+  DIVIDER_WIDTH, HEADER_PADDING, ICON_BOX, PANE_BORDER_WIDTH, PANE_CHROME_HEIGHT,
+  PANE_CHROME_WIDTH, PANE_EDGE, PANE_HEADER_HEIGHT, PANE_PADDING_BOTTOM, PANE_PADDING_LEFT,
+  PANE_RADIUS, ROW_HEIGHT, ROW_INSET, TITLEBAR_BUTTON, TITLEBAR_HEIGHT, TITLEBAR_NUDGE, TOGGLE_GAP,
+  TOGGLE_LEFT, TOGGLE_TOP, WINDOW_GAP,
 };
 
 mod actions;
 mod changes;
 mod config_watch;
+mod drag;
 mod files;
 mod panel;
 mod panes;
@@ -55,9 +62,10 @@ mod toolbar;
 
 use changes::GitView;
 use config_watch::ConfigWatch;
+use drag::{DraggedLine, DropEdge, drag_preview, drop_marker, drop_outline};
 use panel::{OutputLook, PANEL_WIDTH, Panel, PanelSwitch, TreeState};
 use resize::{Edge, EdgeDrag};
-use sidebar::row_key;
+use sidebar::visible_keys;
 use toolbar::{TOOLBAR_HEIGHT, ToolbarMenu};
 
 use crate::SIDEBAR_WIDTH;
@@ -81,18 +89,27 @@ enum ConfigSeen {
   At(SystemTime),
 }
 
-/// The context menu of a sidebar row, open at `position`. A row is known by its first terminal,
-/// since rows move and tabs renumber while the menu is open.
-struct RowMenu {
+/// What a sidebar menu was opened on.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum MenuTarget {
+  /// A session row or a folder row.
+  Line(SidebarKey),
+  /// The sidebar outside any row.
+  Sidebar,
+}
+
+/// A context menu of the sidebar, open at `position`. A line is known by its key, since rows
+/// move and tabs renumber while the menu is open.
+struct SidebarMenu {
   position: Point<Pixels>,
-  row: String,
+  target: MenuTarget,
   /// Fades in.
   shown: Tween,
 }
 
-/// A sidebar row being renamed in place.
+/// A sidebar row or folder being renamed in place.
 struct Renaming {
-  row: String,
+  key: SidebarKey,
   field: Entity<TextField>,
   _events: Subscription,
 }
@@ -145,7 +162,7 @@ pub(crate) struct Workspace {
   theme_notice: Option<SharedString>,
   /// The connection to the core dropped and a new one is being tried.
   reconnecting: bool,
-  menu: Option<RowMenu>,
+  menu: Option<SidebarMenu>,
   toolbar_menu: Option<ToolbarMenu>,
   /// Where the toolbar's menu button was laid out, for the menu to open from.
   more_bounds: Rc<RefCell<Option<Bounds<Pixels>>>>,
@@ -178,6 +195,10 @@ pub(crate) struct Workspace {
   /// Code editors found at start, best first.
   editors: Vec<Editor>,
   renaming: Option<Renaming>,
+  /// Where the line being dragged in the sidebar would land; shown only while a drag is on.
+  drop_spot: Option<DropSpot>,
+  /// The sidebar's scroll area, for where it shows on screen: a drag aims only at lines in sight.
+  sidebar_scroll: ScrollHandle,
   sidebar_open: bool,
   /// How open the sidebar is drawn, 0 to 1, easing toward `sidebar_open`.
   sidebar: Tween,
@@ -192,10 +213,11 @@ pub(crate) struct Workspace {
   panes_area: Rc<RefCell<Option<Bounds<Pixels>>>>,
   /// The window coming in from the setup: the curtain of the window's color lifts.
   entrance: Tween,
-  /// Sidebar rows by their first terminal: those seen so far, and new ones growing in.
-  /// `None` until the first frame, so rows already there at start don't grow.
-  known_rows: Option<HashSet<String>>,
-  row_motion: HashMap<String, Tween>,
+  /// The sidebar's lines on screen: those seen so far, and new ones growing in. A folder's rows
+  /// are on screen only while it is open. `None` until the first frame, so lines already there
+  /// at start don't grow.
+  known_rows: Option<HashSet<SidebarKey>>,
+  row_motion: HashMap<SidebarKey, Tween>,
   /// Keeps the shortcuts working while no pane has the keyboard (no terminal is open).
   focus_handle: FocusHandle,
   config_seen: ConfigSeen,
@@ -354,6 +376,8 @@ impl Workspace {
       _appearance: appearance,
       editors: editors::installed(),
       renaming: None,
+      drop_spot: None,
+      sidebar_scroll: ScrollHandle::new(),
       sidebar_open: true,
       sidebar: Tween::settled(1.0),
       split_motion: None,
@@ -440,6 +464,13 @@ fn menu_colors(colors: Colors) -> MenuColors {
 /// A title bar or toolbar button in the workspace's colors.
 fn chrome_button(id: &'static str, colors: Colors) -> gpui::Stateful<gpui::Div> {
   titlebar_button(id, colors.surface_hover).text_color(colors.text_muted)
+}
+
+fn glyph(icon: (&'static str, f32), colors: Colors) -> AnyElement {
+  div()
+    .text_color(colors.text_muted)
+    .child(glyph_icon(icon))
+    .into_any_element()
 }
 
 /// A double click on the title bar does what the system says: zoom the window by default.

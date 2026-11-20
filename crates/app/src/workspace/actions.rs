@@ -24,7 +24,7 @@ impl Workspace {
     let Some(address) = self.start(argv, size, cwd) else {
       return false;
     };
-    self.layout.new_tab(&address);
+    self.layout.new_tab_in_active_folder(&address);
     true
   }
 
@@ -159,14 +159,22 @@ impl Workspace {
         }
       }
       Action::MoveTabUp | Action::MoveTabDown => {
-        let active = self.layout.active_tab;
-        let row = sidebar_entries(&self.layout, &self.terminals)
-          .into_iter()
-          .find(|entry| matches!(entry, Entry::Tab { index, .. } if *index == active))
-          .and_then(|entry| entry.terminals().first().map(|first| first.to_string()));
-        if let Some(row) = row {
-          let step = if action == Action::MoveTabUp { -1 } else { 1 };
-          self.move_row(&row, step);
+        if let Some(row) = self.active_row() {
+          let direction = if action == Action::MoveTabUp {
+            Direction::Up
+          } else {
+            Direction::Down
+          };
+          self.move_row(&row, direction);
+        }
+      }
+      Action::MoveToNewFolder => {
+        if let Some(row) = self.active_row() {
+          // The new folder's name is edited in the sidebar, so it has to be in sight.
+          if !self.sidebar_open {
+            self.toggle_sidebar();
+          }
+          self.move_to_new_folder(&row, window, cx);
         }
       }
     }
@@ -197,7 +205,7 @@ impl Workspace {
     window: &mut Window,
     cx: &mut Context<Self>,
   ) {
-    // A row being renamed is a text field: cmd-c, cmd-v and the rest are its own.
+    // A row or folder being renamed is a text field: cmd-c, cmd-v and the rest are its own.
     if self.renaming.is_some() {
       return;
     }

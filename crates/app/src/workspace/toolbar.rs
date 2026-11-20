@@ -39,13 +39,6 @@ fn live_dir(terminal: &Terminal) -> Option<String> {
   (!dir.is_empty()).then(|| dir.to_string())
 }
 
-fn glyph(icon: (&'static str, f32), colors: Colors) -> AnyElement {
-  div()
-    .text_color(colors.text_muted)
-    .child(glyph_icon(icon))
-    .into_any_element()
-}
-
 impl Workspace {
   /// Where the active terminal is now. A call to the core, so only for a single key press or
   /// click, as a new split or the toolbar menu; the panel looks it up on the background executor.
@@ -119,7 +112,7 @@ impl Workspace {
           workspace.toggle_panel(panel, cx);
         }))
     };
-    let files = panel_button("toolbar-files", Panel::Files, ICON_FILES, "Files", cx);
+    let files = panel_button("toolbar-files", Panel::Files, ICON_FOLDER, "Files", cx);
     let git = panel_button(
       "toolbar-changes",
       Panel::Changes,

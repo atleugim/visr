@@ -72,7 +72,7 @@ focused pane's title, the pane body, the startup screen) takes its colors from `
 | `surface_sunken`       | A recessed area, such as the setup log box.                                                                     |
 | `surface_error`        | The banner that reports an error.                                                                               |
 | `border`               | The edge of a pane and the divider lines.                                                                      |
-| `border_focused`       | The edge of the focused pane, the sidebar's rename field, the back layer of the stack icon, and a divider being hovered or dragged. |
+| `border_focused`       | The edge of the focused pane, the sidebar's rename field, the back layer of the stack icon, a divider being hovered or dragged, and where a dragged sidebar line will land. |
 | `border_snapped`       | A panel's edge while its width is the default one.                                                              |
 | `text`                 | The main text of the chrome, and the cursor of a text field.                                                    |
 | `text_muted`           | Labels, icons and shortcuts that stay quieter than the main text.                                               |

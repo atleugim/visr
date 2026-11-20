@@ -35,7 +35,8 @@ fn menu_row(id: &str, enabled: bool, colors: MenuColors) -> Stateful<Div> {
     .when(!enabled, |item| item.text_color(colors.dim_text))
 }
 
-/// An item with a label and, at the end, its shortcut. The caller adds the click.
+/// An item with a label and, at the end, its shortcut. A label too long for the menu ends in an
+/// ellipsis. The caller adds the click.
 pub fn menu_item(
   id: &str,
   label: &str,
@@ -44,7 +45,7 @@ pub fn menu_item(
   colors: MenuColors,
 ) -> Stateful<Div> {
   menu_row(id, enabled, colors)
-    .child(label.to_string())
+    .child(div().flex_1().min_w_0().truncate().child(label.to_string()))
     .children(shortcut.map(|shortcut| div().text_color(colors.dim_text).child(shortcut)))
 }
 

@@ -18,7 +18,7 @@ impl Workspace {
     self.reconnecting = false;
     self.panes.clear();
     for address in panes_to_close(&self.layout, &self.terminals) {
-      self.layout.forget(&address);
+      self.layout.stop_showing(&address);
     }
     self.remove_clean_exits();
     self.changed(window, cx);
@@ -69,10 +69,10 @@ impl Workspace {
           self.panes.insert(address.clone(), pane);
         }
         // Gone or finished since the layout was saved: drop its pane.
-        None => self.layout.forget(address),
+        None => self.layout.stop_showing(address),
       }
     }
-    // A row being renamed keeps the keyboard until it is done.
+    // A row or folder being renamed keeps the keyboard until it is done.
     if self.renaming.is_none()
       && let Some(focused) = self.layout.focused()
       && let Some(pane) = self.panes.get(focused)
@@ -118,8 +118,12 @@ impl Workspace {
         match event.change {
           // Its stream ended with the lost program; dropping the pane makes it attach again.
           Change::Restarted => reattach = self.panes.remove(&event.terminal).is_some(),
-          Change::Removed if !self.is_closing(&event.terminal) => {
-            self.layout.forget(&event.terminal)
+          Change::Removed => {
+            self.layout.forget(&event.terminal);
+            // A pane folding away leaves the layout when its motion ends.
+            if !self.is_closing(&event.terminal) {
+              self.layout.stop_showing(&event.terminal);
+            }
           }
           Change::Finished { .. } => finished = true,
           _ => {}

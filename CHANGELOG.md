@@ -11,6 +11,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Cmd+Q quits Visr on macOS, and Ctrl+Shift+Q on Windows
 - About Visr in the Visr menu on macOS shows the app and herdr-core versions
+- Group tabs and terminals into folders in the sidebar, and collapse, rename or reorder them
+- Drag sessions and folders in the sidebar to reorder them, or to move sessions into and out
+  of folders
+
+### Fixed
+
+- A tab whose program ends stays where it was in the sidebar, instead of moving to the end
+- Renaming a terminal while no tab is open takes your typing right away, without a click
+  first
 
 ## [0.1.1] - 2026-11-16
 

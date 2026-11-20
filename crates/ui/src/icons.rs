@@ -5,7 +5,7 @@ use gpui::{
   px,
 };
 
-use crate::tokens::TITLEBAR_BUTTON;
+use crate::tokens::{ICON_BOX, TITLEBAR_BUTTON};
 
 /// The bundled Nerd Font the glyph icons come from.
 pub const ICON_FONT: &str = "Lilex Nerd Font Mono";
@@ -14,7 +14,7 @@ pub const ICON_EXPAND: &str = "\u{f0616}";
 pub const ICON_RESTORE: &str = "\u{f0615}";
 /// Each with the size that makes it look as big as the others: the glyphs fill their boxes
 /// differently.
-pub const ICON_FILES: (&str, f32) = ("\u{ea83}", 19.0);
+pub const ICON_FOLDER: (&str, f32) = ("\u{ea83}", 19.0);
 pub const ICON_SOURCE_CONTROL: (&str, f32) = ("\u{ea68}", 15.0);
 pub const ICON_ELLIPSIS: (&str, f32) = ("\u{ea7c}", 19.0);
 pub const ICON_FOLDER_OPENED: (&str, f32) = ("\u{eaf7}", 20.0);
@@ -25,7 +25,7 @@ pub const ICON_CODE: (&str, f32) = ("\u{eac4}", 20.0);
 /// A codicon centered in a box of one size, so every toolbar icon sits in the same place.
 pub fn glyph_icon((glyph, size): (&'static str, f32)) -> impl IntoElement {
   div()
-    .size(px(18.0))
+    .size(px(ICON_BOX))
     .overflow_hidden()
     .flex()
     .items_center()
@@ -144,7 +144,7 @@ pub struct ShellColors {
 /// The `>_` of a terminal on a small tile.
 pub fn shell_icon(colors: ShellColors) -> impl IntoElement {
   div()
-    .size(px(18.0))
+    .size(px(ICON_BOX))
     .flex_none()
     .flex()
     .items_center()
@@ -177,7 +177,7 @@ pub fn stack_icon(colors: StackColors) -> AnyElement {
   };
   div()
     .relative()
-    .size(px(18.0))
+    .size(px(ICON_BOX))
     .flex_none()
     .child(layer().top_0().right_0().bg(colors.behind))
     .child(

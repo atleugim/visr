@@ -4,6 +4,8 @@
 pub const TITLEBAR_HEIGHT: f32 = 40.0;
 /// The height of a row in the sidebar.
 pub const ROW_HEIGHT: f32 = 32.0;
+/// The box a sidebar row's or the toolbar's icon is centered in.
+pub const ICON_BOX: f32 = 18.0;
 /// Room the macOS traffic lights take at the window's top left.
 const TRAFFIC_LIGHTS_WIDTH: f32 = 72.0;
 /// The title bar's buttons are squares this big.

@@ -435,7 +435,7 @@ impl Workspace {
       Some((path, branch, ratio))
     });
     let Some((path, branch, ratio)) = side.filter(|_| self.closing_pane.is_none()) else {
-      self.layout.forget(address);
+      self.layout.stop_showing(address);
       return;
     };
     let gone = if branch == Branch::First { 0.0 } else { 1.0 };
@@ -452,7 +452,7 @@ impl Workspace {
       cx.background_executor().timer(motion::duration()).await;
       let _ = this.update_in(cx, |workspace, window, cx| {
         if let Some(closing) = workspace.closing_pane.take() {
-          workspace.layout.forget(&closing.address);
+          workspace.layout.stop_showing(&closing.address);
           workspace.changed(window, cx);
         }
       });
