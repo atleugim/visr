@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-26
+
 ### Added
 
 - Cmd+Q quits Visr on macOS, and Ctrl+Shift+Q on Windows
@@ -50,6 +52,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Reload the theme with a shortcut, so edits to its file show without a restart
 - Your own themes in the `themes` folder next to `config.toml`
 
-[Unreleased]: https://github.com/atleugim/visr/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/atleugim/visr/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/atleugim/visr/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/atleugim/visr/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/atleugim/visr/commits/v0.1.0
