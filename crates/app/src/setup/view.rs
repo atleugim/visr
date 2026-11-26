@@ -14,6 +14,7 @@ use hc_client::Error;
 use hc_proto::PROTOCOL_GENERATION;
 use hc_proto::rpc::ErrorKind;
 use ui::colors::Colors;
+use ui::link::Link;
 use ui::motion::{self, Tween};
 
 use super::install::{self, Cancel, Event};
@@ -511,17 +512,6 @@ fn column() -> gpui::Div {
   div().flex().flex_col().gap_4()
 }
 
-fn link(id: &'static str, label: &str, url: String, colors: Colors) -> Stateful<gpui::Div> {
-  div()
-    .id(id)
-    .cursor_pointer()
-    .text_size(px(13.0))
-    .text_color(colors.text_link)
-    .hover(|link| link.opacity(0.8))
-    .child(label.to_string())
-    .on_click(move |_, _, cx| cx.open_url(&url))
-}
-
 impl Setup {
   /// Enter or Space does what the screen's main button does, where there is one.
   fn on_key_down(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
@@ -571,7 +561,7 @@ impl Render for Setup {
     let colors = Colors::active(cx);
     let dim = colors.text_secondary;
     let button = |id: &'static str, label: &str, primary: bool| button(id, label, primary, colors);
-    let link = |id: &'static str, label: &str, url: String| link(id, label, url, colors);
+    let link = |id: &'static str, label: &str, url: String| Link::new(id, label.to_string(), url);
     let heading = |text: &str| div().text_size(px(20.0)).child(text.to_string());
     let paragraph = |text: &str| div().text_color(dim).child(text.to_string());
     let manual = || link("manual", "Install it manually", MANUAL_URL.to_string());

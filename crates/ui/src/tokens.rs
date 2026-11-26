@@ -4,6 +4,8 @@
 pub const TITLEBAR_HEIGHT: f32 = 40.0;
 /// The height of a row in the sidebar.
 pub const ROW_HEIGHT: f32 = 32.0;
+/// The box a sidebar row's or the toolbar's icon is centered in.
+pub const ICON_BOX: f32 = 18.0;
 /// Room the macOS traffic lights take at the window's top left.
 const TRAFFIC_LIGHTS_WIDTH: f32 = 72.0;
 /// The title bar's buttons are squares this big.
@@ -13,6 +15,8 @@ pub const WINDOW_GAP: f32 = 8.0;
 /// How far down the middle of a collapsed top left pane header is: what the traffic lights, the
 /// sidebar toggle and the sidebar's + all center on.
 const TITLE_CENTER: f32 = WINDOW_GAP + PANE_BORDER_WIDTH + PANE_HEADER_HEIGHT / 2.0;
+/// Where the traffic lights' left edge is, in every window that has them.
+pub const TRAFFIC_LIGHTS_LEFT: f32 = 14.0;
 /// How tall the macOS traffic lights are.
 const TRAFFIC_LIGHTS_HEIGHT: f32 = 14.0;
 /// Where the traffic lights' top is, so that their middle is the title's.
@@ -55,3 +59,20 @@ pub const PANE_CHROME_HEIGHT: f32 =
   PANE_HEADER_HEIGHT + PANE_PADDING_BOTTOM + 2.0 * PANE_BORDER_WIDTH;
 /// Room before a panel row's content; its highlight reaches both edges of the panel.
 pub const ROW_INSET: f32 = 12.0;
+/// The smallest height a clickable element may have, so it is easy to hit.
+pub const MIN_HIT_HEIGHT: f32 = 24.0;
+/// The text size of the sidebar's rows and menus, and of the copy of a row that follows a drag, so
+/// all three read alike.
+pub const ROW_TEXT_SIZE: f32 = 13.0;
+/// The narrowest a sidebar menu is.
+pub const MENU_MIN_WIDTH: f32 = 220.0;
+/// The widest a sidebar menu is, before a long name truncates.
+pub const MENU_MAX_WIDTH: f32 = 320.0;
+/// Room a sidebar menu keeps from the window's edges: it snaps this far in, and its height is
+/// capped by it on both sides.
+pub const MENU_WINDOW_MARGIN: f32 = 16.0;
+/// The gap between two lines in the sidebar's list.
+pub const LINE_GAP: f32 = 2.0;
+/// The height of the marker that shows where a dragged line lands. It sits in the gap between two
+/// lines, so it is exactly as tall as that gap.
+pub const DROP_MARKER_HEIGHT: f32 = LINE_GAP;

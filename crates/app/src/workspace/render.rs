@@ -3,20 +3,18 @@
 use super::*;
 
 impl Workspace {
-  /// Grows in rows new to the sidebar, and drops the motions that are done.
-  fn track_motion(&mut self, now: Instant) {
-    let rows: HashSet<String> = sidebar_entries(&self.layout, &self.terminals)
-      .iter()
-      .filter_map(|entry| row_key(entry).map(str::to_string))
-      .collect();
+  /// Grows in lines new on the sidebar, as the rows of a folder just opened, and drops the
+  /// motions that are done.
+  fn track_motion(&mut self, items: &[SidebarItem], now: Instant) {
+    let lines = visible_keys(items);
     if let Some(known) = &self.known_rows {
-      for row in rows.difference(known) {
+      for line in lines.difference(known) {
         let tween = Tween::new(0.0, 1.0, now, motion::duration());
-        self.row_motion.insert(row.clone(), tween);
+        self.row_motion.insert(line.clone(), tween);
       }
     }
     self.row_motion.retain(|_, tween| !tween.done(now));
-    self.known_rows = Some(rows);
+    self.known_rows = Some(lines);
   }
 }
 
@@ -31,7 +29,8 @@ impl Render for Workspace {
     {
       self.split_motion = None;
     }
-    self.track_motion(now);
+    let items = sidebar_items(&self.layout, &self.terminals);
+    self.track_motion(&items, now);
     let zooming = self.zoom.as_ref().is_some_and(|zoom| !zoom.tween.done(now));
     let resizing = !self.sidebar.done(now)
       || self.edge_drag.is_some()
@@ -73,8 +72,13 @@ impl Render for Workspace {
       Some(tab) => self.render_node(&tab.root, Vec::new(), (true, true), cx),
       None => self.render_empty(cx),
     };
-    // With no pane to hold the keyboard, the window does, or no shortcut would get to run.
-    if self.layout.active().is_none() && !self.focus_handle.contains_focused(window, cx) {
+    // With no pane to hold the keyboard, the window does, or no shortcut would get to run. A
+    // rename's field holds it meanwhile: the check looks at the last frame, which a field just
+    // made isn't in yet.
+    if self.layout.active().is_none()
+      && self.renaming.is_none()
+      && !self.focus_handle.contains_focused(window, cx)
+    {
       window.focus(&self.focus_handle);
     }
     let config_error = self.config_error.as_ref().map(|error| {
@@ -134,7 +138,7 @@ impl Render for Workspace {
             .h_full()
             .flex_none()
             .overflow_hidden()
-            .child(self.render_sidebar(cx)),
+            .child(self.render_sidebar(&items, cx)),
         )
       })
       .child(main)
@@ -191,11 +195,15 @@ impl Render for Workspace {
       })
       .children(self.menu.as_ref().map(|menu| {
         deferred(
-          anchored().position(menu.position).snap_to_window().child(
-            div()
-              .opacity(menu.shown.value(now))
-              .child(self.render_menu(menu, cx)),
-          ),
+          anchored()
+            .position(menu.position)
+            .snap_to_window_with_margin(px(MENU_WINDOW_MARGIN))
+            .child(div().opacity(menu.shown.value(now)).child(self.render_menu(
+              menu,
+              &items,
+              window.viewport_size().height,
+              cx,
+            ))),
         )
       }))
   }

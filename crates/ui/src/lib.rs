@@ -5,6 +5,7 @@ pub mod colors;
 mod edit;
 pub mod file_icons;
 pub mod icons;
+pub mod link;
 pub mod menu;
 pub mod motion;
 pub mod text_field;
