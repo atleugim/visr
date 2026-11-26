@@ -302,6 +302,10 @@ pub enum Action {
   SelectTab(usize),
   MoveTabUp,
   MoveTabDown,
+  MoveToNewFolder,
+  NewFolder,
+  ToggleFolder,
+  RemoveFromFolder,
   ToggleSidebar,
   ZoomPane,
   Copy,
@@ -321,6 +325,10 @@ fn action_named(name: &str) -> Option<Action> {
     "focus_prev" => Action::FocusPrev,
     "move_tab_up" => Action::MoveTabUp,
     "move_tab_down" => Action::MoveTabDown,
+    "move_to_new_folder" => Action::MoveToNewFolder,
+    "new_folder" => Action::NewFolder,
+    "toggle_folder" => Action::ToggleFolder,
+    "remove_from_folder" => Action::RemoveFromFolder,
     "toggle_sidebar" => Action::ToggleSidebar,
     "zoom_pane" => Action::ZoomPane,
     "copy" => Action::Copy,
@@ -497,5 +505,62 @@ impl Keymap {
       .iter()
       .find(|(bound, _)| bound == press)
       .map(|(_, action)| *action)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  const DEFAULT_FILES: [(&str, &str); 2] = [
+    ("macos", include_str!("../defaults/macos.toml")),
+    ("other", include_str!("../defaults/other.toml")),
+  ];
+
+  fn default_keys(file: &str) -> BTreeMap<String, String> {
+    parse_table(file)
+      .expect("the default files are valid TOML")
+      .get("keys")
+      .and_then(Value::as_table)
+      .expect("the default files have keys")
+      .iter()
+      .map(|(name, key)| {
+        (
+          name.clone(),
+          key.as_str().expect("a key is text").to_string(),
+        )
+      })
+      .collect()
+  }
+
+  #[test]
+  fn folder_actions_have_a_default_key_on_every_platform() {
+    for (platform, file) in DEFAULT_FILES {
+      let keys = default_keys(file);
+      for name in ["new_folder", "toggle_folder", "remove_from_folder"] {
+        assert!(action_named(name).is_some(), "{name} is not an action");
+        assert!(keys.contains_key(name), "{platform} has no key for {name}");
+      }
+    }
+  }
+
+  #[test]
+  fn default_keys_are_valid_and_never_shared() {
+    for (platform, file) in DEFAULT_FILES {
+      let mut seen: Vec<(KeyPress, String)> = Vec::new();
+      for (name, binding) in default_keys(file) {
+        assert!(
+          action_named(&name).is_some(),
+          "{platform}: unknown action {name}"
+        );
+        let press = parse_binding(&binding).expect("the default keys are valid");
+        let taken = seen.iter().find(|(other, _)| *other == press);
+        assert!(
+          taken.is_none(),
+          "{platform}: {name} shares a key with {taken:?}"
+        );
+        seen.push((press, name));
+      }
+    }
   }
 }
